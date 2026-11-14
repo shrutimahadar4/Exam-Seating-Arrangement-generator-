@@ -1,3 +1,6 @@
+# Exam-Seating-Arrangement-generator-
+An Exam Seating Arrangement Generator that automatically assigns students to exam halls and seats based on their details. It reduces manual work, saves time, avoids duplicate seat allocation, and generates organized seating plans for smooth and efficient examination management.
+
 # 🎓 ExamSeat Pro — Professional Exam Seating Arrangement Generator
 
 **ExamSeat Pro** is an upgraded, automated, rule-based examination seating management system developed with **Java**, **JDBC**, **MySQL / SQLite**, **HTML5**, and **CSS3**.
