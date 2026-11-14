@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console | ExamSeat Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .seating-progress-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .progress-bar-container {
+      background: #e2e8f0;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .progress-bar-fill.warning { background: var(--warning); }
+    .progress-bar-fill.danger { background: var(--danger); }
+    
+    .audit-terminal {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.86rem;
+      padding: 16px;
+      border-radius: 8px;
+      line-height: 1.6;
+      max-height: 260px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+    .audit-terminal .success-line { color: #4ade80; }
+    .audit-terminal .warn-line { color: #facc15; }
+    .audit-terminal .err-line { color: #f87171; }
+
+    .year-stat-pills {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .year-stat-pill {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .year-stat-pill strong {
+      font-size: 1.1rem;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="icon-logo" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">EP</div>
+      <span>ExamSeat Pro <small style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">| Admin Console</small></span>
+    </div>
+    <div class="nav-right">
+      <span id="admin-db-badge" class="badge badge-info">DB: Checking</span>
+      <span id="active-exam-badge" class="badge badge-warning">Exam: Loading...</span>
+      <span id="active-hold-badge" class="badge badge-released">🔓 RELEASED</span>
+      <span id="admin-name-badge" style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">Admin</span>
+      <button class="btn btn-secondary btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="admin-layout">
+      
+      <!-- Sidebar Menu Navigation -->
+      <aside class="sidebar-menu">
+        <div class="sidebar-menu-header">Modules & Features</div>
+        <div class="menu-item active" onclick="showSection('overview')">
+          <span>📊</span> 1. Dashboard Overview
+        </div>
+        <div class="menu-item" onclick="showSection('students')">
+          <span>🎓</span> 2. Year-Wise Students
+        </div>
+        <div class="menu-item" onclick="showSection('timetable')">
+          <span>📅</span> 3. Exam Timetable
+        </div>
+        <div class="menu-item" onclick="showSection('divisions')">
+          <span>🏷️</span> 4. Manage Divisions
+        </div>
+        <div class="menu-item" onclick="showSection('classrooms')">
+          <span>🏫</span> 5. Classrooms & Benches
+        </div>
+        <div class="menu-item" onclick="showSection('generate')">
+          <span>⚙️</span> 6. Generate Seating
+        </div>
+        <div class="menu-item" onclick="showSection('seating-view')">
+          <span>🗺️</span> 7. Seating Matrix & Excel
+        </div>
+        <div class="menu-item" onclick="logout()" style="color: var(--danger);">
+          <span>🚪</span> 8. Sign Out
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="admin-content">
+
+        <!-- 1. OVERVIEW SECTION (Feature 5: Professional Dashboard) -->
+        <section id="section-overview" class="content-section">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #eff6ff; color: #2563eb;">👨‍🎓</div>
+              <div class="stat-content">
+                <div class="stat-val" id="stat-students">0</div>
+                <div class="stat-label">Total Enrolled Students</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #f0fdf4; color: #16a34a;">🪑</div>
+              <div class="stat-content">
+                <div class="stat-val" id="stat-capacity">0</div>
+                <div class="stat-label">Total Available Seats</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #faf5ff; color: #9333ea;">🏫</div>
+              <div class="stat-content">
+                <div class="stat-val" id="stat-classrooms">0</div>
+                <div class="stat-label">Classrooms Configured</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #fffbeb; color: #d97706;">📅</div>
+              <div class="stat-content">
+                <div class="stat-val" id="stat-exams">0</div>
+                <div class="stat-label">Scheduled Exam Slots</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Year-Wise Distribution Summary -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🎓 Student Enrollment by Academic Year</div>
+              <button class="btn btn-secondary btn-sm" onclick="showSection('students')">View Students</button>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+              Distribution of students across departments and academic tiers:
+            </p>
+            <div class="year-stat-pills">
+              <div class="year-stat-pill">
+                <span class="badge badge-year-fe">First Year (FE)</span>
+                <strong id="year-count-fe">0</strong> Students
+              </div>
+              <div class="year-stat-pill">
+                <span class="badge badge-year-se">Second Year (SE)</span>
+                <strong id="year-count-se">0</strong> Students
+              </div>
+              <div class="year-stat-pill">
+                <span class="badge badge-year-te">Third Year (TE)</span>
+                <strong id="year-count-te">0</strong> Students
+              </div>
+              <div class="year-stat-pill">
+                <span class="badge badge-year-be">Fourth Year (BE)</span>
+                <strong id="year-count-be">0</strong> Students
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Examination & Allocation Status Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📌 Active Examination & Allocation Status</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span id="overview-hold-status-badge" class="badge badge-released">🔓 RELEASED</span>
+                <span id="allocation-status-badge" class="badge badge-warning">Not Generated</span>
+              </div>
+            </div>
+            <div style="line-height: 1.8; font-size: 0.95rem;">
+              <p><strong>Examination Name:</strong> <span id="overview-exam-name">-</span></p>
+              <p><strong>Course / Subject:</strong> <span id="overview-exam-subject">-</span></p>
+              <p><strong>Target Academic Year:</strong> <span id="overview-exam-year">-</span></p>
+              <p><strong>Date & Timetable Slot:</strong> <span id="overview-exam-datetime">-</span></p>
+              <p><strong>Arrangement Hold Status:</strong> <span id="overview-hold-text">Released (Modifications Allowed)</span></p>
+              <p><strong>Capacity Status:</strong> <span id="overview-capacity-status">-</span></p>
+              <p><strong>Allocated Students:</strong> <strong id="overview-allocated-count" style="color: var(--primary);">0</strong></p>
+            </div>
+            <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="showSection('generate')">
+                ⚙️ Run Seating Generator
+              </button>
+              <button class="btn btn-secondary" onclick="showSection('timetable')">
+                📅 View Exam Timetable
+              </button>
+              <button class="btn btn-secondary" onclick="showSection('seating-view')">
+                🗺️ View Seating Matrix
+              </button>
+              <button class="btn btn-excel" onclick="downloadExcelSeating(dashboardData.activeExamId)">
+                📊 Export Seating to Excel
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. YEAR-WISE STUDENTS MANAGEMENT & EXCEL IMPORT (Features 1 & 2) -->
+        <section id="section-students" class="content-section" style="display: none;">
+          
+          <!-- Actions & Excel Tools Banner -->
+          <div class="card" style="background: linear-gradient(to right, #ffffff, #f0fdf4); border-color: #bbf7d0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+              <div>
+                <h3 style="font-size: 1.15rem; color: #166534; display: flex; align-items: center; gap: 8px;">
+                  <span>📊</span> Excel Roster Integration
+                </h3>
+                <p style="font-size: 0.88rem; color: #14532d; margin-top: 4px;">
+                  Import complete student cohorts from Microsoft Excel or download the standardized Excel CSV template.
+                </p>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadExcelTemplate()">
+                  📥 Download Excel Template
+                </button>
+                <button class="btn btn-excel btn-sm" onclick="openExcelImportModal()">
+                  📤 Import from Excel / CSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Individual Student Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👨‍🎓 Add Individual Student</div>
+            </div>
+            <form id="form-add-student" onsubmit="handleAddStudent(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Academic Year *</label>
+                  <select id="std-year" class="form-control" required>
+                    <option value="First Year">First Year (FE)</option>
+                    <option value="Second Year">Second Year (SE)</option>
+                    <option value="Third Year" selected>Third Year (TE)</option>
+                    <option value="Fourth Year">Fourth Year (BE)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Roll Number *</label>
+                  <input type="text" id="std-roll" class="form-control" placeholder="e.g. TE-01 or A-07" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Full Name *</label>
+                  <input type="text" id="std-name" class="form-control" placeholder="e.g. Rahul Sharma" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Division *</label>
+                  <select id="std-division" class="form-control" required>
+                    <!-- Filled dynamically -->
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Portal Username (Optional)</label>
+                  <input type="text" id="std-username" class="form-control" placeholder="Defaults to Roll Number">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Portal Password (Optional)</label>
+                  <input type="text" id="std-password" class="form-control" placeholder="Defaults to pass123">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                  <button type="submit" class="btn btn-primary btn-block">➕ Save Student</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Students List Table with Year Pills Filter -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📋 Registered Students Roster</div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="student-search-input" class="form-control" placeholder="Search by name, roll, year..." oninput="filterStudentsTable()" style="width: 240px; padding: 6px 12px; font-size: 0.85rem;">
+                <button class="btn btn-danger btn-sm" onclick="confirmDeleteAll()" title="Delete all students currently shown by active year filter">
+                  🗑️ <span id="delete-all-btn-label">Delete All Students</span>
+                </button>
+              </div>
+            </div>
+
+
+            <!-- Year Filter Tabs (Feature 1: Year-Wise Student Management) -->
+            <div class="year-pill-tabs">
+              <div class="year-pill active" onclick="filterByYear('All Years', this)">All Academic Years</div>
+              <div class="year-pill" onclick="filterByYear('First Year', this)">First Year (FE)</div>
+              <div class="year-pill" onclick="filterByYear('Second Year', this)">Second Year (SE)</div>
+              <div class="year-pill" onclick="filterByYear('Third Year', this)">Third Year (TE)</div>
+              <div class="year-pill" onclick="filterByYear('Fourth Year', this)">Fourth Year (BE)</div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="students-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Academic Year</th>
+                    <th>Roll No</th>
+                    <th>Student Name</th>
+                    <th>Division</th>
+                    <th>Username</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="students-table-body">
+                  <!-- Filled via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. EXAM TIMETABLE MANAGEMENT & HOLD FEATURE (Features 3 & 4) -->
+        <section id="section-timetable" class="content-section" style="display: none;">
+          
+          <!-- Schedule New Exam in Timetable -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📅 Add Examination to Timetable</div>
+            </div>
+            <form onsubmit="handleAddTimetableExam(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Exam Name / Title *</label>
+                  <input type="text" id="tt-exam-name" class="form-control" placeholder="e.g. Winter End-Semester Exam 2026" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Subject / Course *</label>
+                  <input type="text" id="tt-subject" class="form-control" placeholder="e.g. Advanced Java & Database Management" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Academic Year *</label>
+                  <select id="tt-year" class="form-control" required>
+                    <option value="All Years">All Years (Combined)</option>
+                    <option value="First Year">First Year (FE)</option>
+                    <option value="Second Year">Second Year (SE)</option>
+                    <option value="Third Year" selected>Third Year (TE)</option>
+                    <option value="Fourth Year">Fourth Year (BE)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Examination Date *</label>
+                  <input type="date" id="tt-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Start Time *</label>
+                  <input type="text" id="tt-start-time" class="form-control" placeholder="e.g. 10:00 AM" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time *</label>
+                  <input type="text" id="tt-end-time" class="form-control" placeholder="e.g. 01:00 PM" required>
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                  <button type="submit" class="btn btn-primary btn-block">➕ Add to Timetable</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Timetable List Table with Hold and Release Actions -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📅 Master Examination Timetable & Hold Status</div>
+              <span class="badge badge-info" id="tt-count-badge">0 Exams</span>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Exam Title</th>
+                    <th>Subject</th>
+                    <th>Target Year</th>
+                    <th>Date</th>
+                    <th>Timing Slot</th>
+                    <th>Hold Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="timetable-table-body">
+                  <!-- Filled via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. MANAGE DIVISIONS SECTION -->
+        <section id="section-divisions" class="content-section" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏷️ Add New Division</div>
+            </div>
+            <form onsubmit="handleAddDivision(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Division Name/Code *</label>
+                  <input type="text" id="div-name" class="form-control" placeholder="e.g. D" maxlength="10" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description / Department</label>
+                  <input type="text" id="div-desc" class="form-control" placeholder="e.g. Mechanical Engineering - Div D">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                  <button type="submit" class="btn btn-primary btn-block">➕ Add Division</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏷️ Existing Divisions & Student Distribution</div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Division</th>
+                    <th>Department / Description</th>
+                    <th>Students Count</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="divisions-table-body">
+                  <!-- Dynamic -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. CLASSROOMS & BENCHES SECTION -->
+        <section id="section-classrooms" class="content-section" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏫 Add Classroom & Bench Configuration</div>
+            </div>
+            <form onsubmit="handleAddClassroom(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Classroom Number / Name *</label>
+                  <input type="text" id="room-name" class="form-control" placeholder="e.g. Room 301" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Number of Benches *</label>
+                  <input type="number" id="room-benches" class="form-control" min="1" max="100" value="5" required oninput="updateRoomCalc()">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Seats per Bench *</label>
+                  <input type="number" id="room-seats" class="form-control" min="1" max="10" value="2" required oninput="updateRoomCalc()">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                  <button type="submit" class="btn btn-primary btn-block">➕ Add Classroom</button>
+                </div>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                Calculated Room Capacity: <strong id="calculated-room-cap" style="color: var(--primary);">10</strong> seats
+              </p>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏫 Configured Classrooms & Capacity</div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Room Number</th>
+                    <th>Total Benches</th>
+                    <th>Seats / Bench</th>
+                    <th>Total Capacity</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="classrooms-table-body">
+                  <!-- Dynamic -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. GENERATE SEATING ARRANGEMENT SECTION (With Hold Protection) -->
+        <section id="section-generate" class="content-section" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">⚙️ Rule-Based Seating Arrangement Generator</div>
+            </div>
+
+            <!-- Exam Selection -->
+            <div class="form-row" style="margin-bottom: 20px;">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label">Select Examination from Timetable *</label>
+                <select id="gen-exam-select" class="form-control" onchange="onGenExamSelectChange()">
+                  <!-- Dynamic -->
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
+                <div id="gen-exam-hold-badge" style="width: 100%; text-align: center; padding: 10px;">
+                  <span class="badge badge-released">🔓 RELEASED</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hold Warning Alert if Locked -->
+            <div id="hold-lock-warning" style="display: none; background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+              <h4 style="color: #b91c1c; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span>🔒</span> Seating Arrangement is ON HOLD (Locked)
+              </h4>
+              <p style="font-size: 0.88rem; color: #7f1d1d; margin-bottom: 12px;">
+                This exam arrangement has been locked by the administrator to prevent accidental overrides. To recalculate or modify this arrangement, release the hold first.
+              </p>
+              <button class="btn btn-release btn-sm" onclick="releaseCurrentHold()">
+                🔓 Release Hold Now
+              </button>
+            </div>
+            
+            <!-- Capacity Check Box -->
+            <div class="seating-progress-box">
+              <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem;">
+                <span>Capacity Check for Selected Cohort:</span>
+                <span id="capacity-check-ratio">0 Students / 0 Seats</span>
+              </div>
+              <div class="progress-bar-container">
+                <div id="capacity-progress-fill" class="progress-bar-fill"></div>
+              </div>
+              <div id="capacity-warning-text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+                Checking infrastructure and cohort enrollment...
+              </div>
+            </div>
+
+            <!-- Algorithm Description Alert -->
+            <div style="background: #eff6ff; border-left: 4px solid var(--primary); padding: 14px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5;">
+              <strong>Rule-Based Seating Logic (No AI/ML):</strong><br>
+              1. Verifies if Total Classroom Capacity &ge; Target Year Students.<br>
+              2. Groups students by division (Div A, Div B, Div C...).<br>
+              3. Alternates division assignment across each bench.<br>
+              4. Checks neighbouring seats horizontally (same bench) & vertically (front bench) before assigning.<br>
+              5. Persists the final conflict-free arrangement directly to the database via JDBC.
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button id="btn-run-algorithm" class="btn btn-primary" onclick="triggerGenerateSeating()">
+                🚀 Generate Seating Arrangement Now
+              </button>
+              <button id="btn-toggle-hold" class="btn btn-secondary" onclick="toggleHoldForSelectedExam()">
+                🔒 Put on Hold
+              </button>
+              <button class="btn btn-secondary" onclick="showSection('seating-view')">
+                🗺️ View Seating Matrix
+              </button>
+            </div>
+
+            <!-- Live Audit Terminal Output -->
+            <div class="audit-terminal" id="audit-log">
+              [System Ready] Select an examination and click "Generate Seating Arrangement Now".
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. VIEW SEATING ARRANGEMENT & EXCEL EXPORT (Features 2 & 5) -->
+        <section id="section-seating-view" class="content-section" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🗺️ Examination Seating Arrangement Matrix</div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-excel btn-sm" onclick="exportCurrentSeatingToExcel()">
+                  📊 Export to Excel (.xlsx / .csv)
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleViewMode('grid')">
+                  Classroom Grid
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleViewMode('table')">
+                  Attendance Sheet
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="window.print()">
+                  🖨️ Print Layout
+                </button>
+              </div>
+            </div>
+
+            <!-- Exam and Classroom Filters -->
+            <div style="display: flex; gap: 16px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+              <div>
+                <label class="form-label" style="display: inline; margin-right: 8px;">Exam:</label>
+                <select id="view-exam-select" class="form-control" style="display: inline-block; width: auto;" onchange="onViewExamChange()">
+                  <!-- Dynamic -->
+                </select>
+              </div>
+              <div>
+                <label class="form-label" style="display: inline; margin-right: 8px;">Filter Classroom:</label>
+                <select id="filter-room" class="form-control" style="display: inline-block; width: auto;" onchange="renderSeatingMatrix()">
+                  <option value="ALL">All Classrooms</option>
+                </select>
+              </div>
+              <div id="seating-stats-summary" style="font-size: 0.9rem; font-weight: 600; color: var(--secondary);">
+                <!-- Dynamic -->
+              </div>
+            </div>
+
+            <!-- Grid Container -->
+            <div id="seating-grid-container">
+              <!-- Visual classroom layout injected here -->
+            </div>
+
+            <!-- Table Container (Attendance Sheet) -->
+            <div id="seating-table-container" style="display: none;">
+              <div class="table-responsive">
+                <table class="data-table" id="attendance-sheet-table">
+                  <thead>
+                    <tr>
+                      <th>Room</th>
+                      <th>Bench</th>
+                      <th>Seat</th>
+                      <th>Academic Year</th>
+                      <th>Roll No</th>
+                      <th>Student Name</th>
+                      <th>Division</th>
+                      <th>Status</th>
+                      <th>Student Signature</th>
+                    </tr>
+                  </thead>
+                  <tbody id="attendance-table-body">
+                    <!-- Dynamic -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Excel Import Modal Dialog (Feature 2) -->
+  <div id="excel-import-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+          <span>📊</span> Import Students from Excel / CSV
+        </h3>
+        <button style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" onclick="closeExcelImportModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">
+          Select an Excel CSV file or paste rows below. Expected columns:<br>
+          <code>Academic Year, Roll No, Student Name, Division, [Username], [Password]</code>
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Default Academic Year (if not specified in file)</label>
+          <select id="excel-default-year" class="form-control">
+            <option value="First Year">First Year (FE)</option>
+            <option value="Second Year">Second Year (SE)</option>
+            <option value="Third Year" selected>Third Year (TE)</option>
+            <option value="Fourth Year">Fourth Year (BE)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Upload CSV / Excel File</label>
+          <input type="file" id="excel-file-input" class="form-control" accept=".csv, .txt, .xlsx, .xls" onchange="handleExcelFileUpload(event)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Or Paste Spreadsheet Data Here:</label>
+          <textarea id="excel-paste-text" class="form-control" rows="5" placeholder="Third Year, TE-01, Aarav Sharma, A
+Third Year, TE-02, Aditi Verma, B
+Second Year, SE-01, Manish Iyer, A"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeExcelImportModal()">Cancel</button>
+        <button class="btn btn-excel" onclick="submitExcelImport()">📥 Import Students Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
